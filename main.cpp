@@ -3,52 +3,93 @@
 #include <cstdint>
 #include <format>
 
+using u8 = std::uint8_t;
+using u16 = std::uint16_t;
+using u32 = std::uint32_t;
+using u64 = std::uint64_t;
+
 class CPU {
     private:
-        uint64_t reg[31]{};
-        uint64_t sp[4]{};
-        uint64_t elr[3]{};
-        uint64_t spsr[3]{};
-        uint64_t pc{};
-        uint64_t nzcv{};
+        u64 gpr[31]{};
+        u64 sp{};
+        u64 pc{};
+        u64 nzcv{};
         // add SIMD registers later.
 
+        static constexpr u64 N = (1u << 31);
+        static constexpr u64 Z = (1u << 30);
+        static constexpr u64 C = (1u << 29);
+        static constexpr u64 V = (1u << 28);
+
         bool negative_flag() const {
-            return nzcv & (1 << 31);
+            return nzcv & N;
         }
 
         bool zero_flag() const {
-            return nzcv & (1 << 30);
+            return nzcv & Z;
         }
 
         bool carry_flag() const {
-            return nzcv & (1 << 29);
+            return nzcv & C;
         }
 
         bool overflow_flag() const {
-            return nzcv & (1 << 28);
-        }
+            return nzcv & V;
+        } 
 
     public:
-        uint64_t read_x(uint8_t n) const {
+        u64 read_x(u8 n) const {
             if (n > 30) {
                 throw std::out_of_range("Tried to access register address larger than 30.");
             }
-            return reg[n];
+            return gpr[n];
         }
 
-        uint32_t read_w(uint8_t n) const {
+        u32 read_w(u8 n) const {
             if (n > 30) {
                 throw std::out_of_range("Tried to access register address larger than 30.");
             }
-            return (uint32_t) reg[n];
+            return (u32) gpr[n];
         }
+
+        void set_negative(bool b) {
+            if (b) {
+                nzcv |= N;
+            } else {
+                nzcv &= ~N;
+            }
+        }
+
+        void set_zero(bool b) {
+            if (b) {
+                nzcv |= Z;
+            } else {
+                nzcv &= ~Z;
+            }
+        }
+
+        void set_carry(bool b) {
+            if (b) {
+                nzcv |= C;
+            } else {
+                nzcv &= ~C;
+            }
+        }
+
+        void set_overflow(bool b) {
+            if (b) {
+                nzcv |= V;
+            } else {
+                nzcv &= ~V;
+            }
+        }
+
 };
 
 class Memory {
     private:
         static constexpr std::size_t MEMORY_SIZE = 256;
-        uint8_t memory[MEMORY_SIZE]{};
+        u8 memory[MEMORY_SIZE]{};
 
     public:
         Memory(){}
@@ -87,40 +128,82 @@ class Memory {
         }
 
         // Memory is stored in little-endian.
-        uint8_t read_8(uint8_t address) const {
+        u8 read_8(u64 address) const {
+            if (address > MEMORY_SIZE - 1) {
+                throw std::out_of_range("read_8 tried to access a memory address large than the maximum memory size.");
+            }
             return memory[address];
         }
 
-        uint16_t read_16(uint8_t address) const {
+        u16 read_16(u64 address) const {
             if (address > MEMORY_SIZE - 2) {
-                throw std::out_of_range("read_16 to access a memory address larger than 255.");
+                throw std::out_of_range("read_16 tried to access a memory address large than the maximum memory size.");
             }
-            return (uint16_t) memory[address] | 
-                (uint16_t) memory[address + 1] << 8;
+            return (u16) memory[address] | 
+                (u16) memory[address + 1] << 8;
         }
 
-        uint32_t read_32(uint8_t address) const {
+        u32 read_32(u64 address) const {
             if (address > MEMORY_SIZE - 4) {
-                throw std::out_of_range("read_32 to access a memory address larger than 255.");
+                throw std::out_of_range("read_32 tried to access a memory address large than the maximum memory size.");
             }
-            return (uint32_t) memory[address] |
-                (uint32_t) memory[address+1] << 8 |
-                (uint32_t) memory[address+2] << 16 |
-                (uint32_t) memory[address+3] << 24;
+            return (u32) memory[address] |
+                (u32) memory[address+1] << 8 |
+                (u32) memory[address+2] << 16 |
+                (u32) memory[address+3] << 24;
         }
 
-        uint64_t read_64(uint8_t address) const {
+        u64 read_64(u64 address) const {
             if (address > MEMORY_SIZE - 8) {
-                throw std::out_of_range("read_64 tried to access a memory address larger than 255.");
+                throw std::out_of_range("read_64 tried to access a memory address large than the maximum memory size.");
             }
-            return (uint64_t) memory[address] |
-                (uint64_t) memory[address+1] << 8 |
-                (uint64_t) memory[address+2] << 16 |
-                (uint64_t) memory[address+3] << 24 |
-                (uint64_t) memory[address+4] << 32 |
-                (uint64_t) memory[address+5] << 40 |
-                (uint64_t) memory[address+6] << 48 |
-                (uint64_t) memory[address+7] << 56;
+            return (u64) memory[address] |
+                (u64) memory[address+1] << 8 |
+                (u64) memory[address+2] << 16 |
+                (u64) memory[address+3] << 24 |
+                (u64) memory[address+4] << 32 |
+                (u64) memory[address+5] << 40 |
+                (u64) memory[address+6] << 48 |
+                (u64) memory[address+7] << 56;
+        }
+
+        void write_8(u64 address, u64 value) {
+            if (address > MEMORY_SIZE - 1) {
+                throw std::out_of_range("write_8 tried to access a memory address large than the maximum memory size.");
+            }
+            memory[address] = value & 0xff;
+        }
+
+        void write_16(u64 address, u64 value) {
+            if (address > MEMORY_SIZE - 2) {
+                throw std::out_of_range("write_16 tried to access a memory address large than the maximum memory size.");
+            }
+            memory[address] = value & 0xff;
+            memory[address + 1] = (value >> 8) & 0xff;
+        }
+
+        void write_32(u64 address, u64 value) {
+            if (address > MEMORY_SIZE - 4) {
+                throw std::out_of_range("write_32 tried to access a memory address large than the maximum memory size.");
+            }
+            memory[address] = value & 0xff;
+            memory[address + 1] = (value >> 8) & 0xff;
+            memory[address + 2] = (value >> 16) & 0xff;
+            memory[address + 3] = (value >> 24) & 0xff;
+        }
+
+        void write_64(u64 address, u64 value) {
+            if (address > MEMORY_SIZE - 8) {
+                throw std::out_of_range("write_64 tried to access a memory address large than the maximum memory size.");
+            }
+            memory[address] = value & 0xff;
+            memory[address + 1] = (value >> 8) & 0xff;
+            memory[address + 2] = (value >> 16) & 0xff;
+            memory[address + 3] = (value >> 24) & 0xff;
+            memory[address + 4] = (value >> 32) & 0xff;
+            memory[address + 5] = (value >> 40) & 0xff;
+            memory[address + 6] = (value >> 48) & 0xff;
+            memory[address + 7] = (value >> 56) & 0xff;
         }
 };
 
