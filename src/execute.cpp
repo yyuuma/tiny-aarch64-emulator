@@ -144,7 +144,6 @@ void CPU::execute_immediate_add_sub_instruction(u32 Rd, u32 Rn, u32 imm12, bool 
     }
 }
 
-
 // https://www.scs.stanford.edu/~zyedidia/arm64/encodingindex.html#movewide
 void CPU::execute_immediate_move_wide_instruction(u32 Rd, u32 imm16, u32 hw, u32 opc, bool sf) {
     if ((sf == 0) && get_instruction_bit(hw, 1) == 1) {

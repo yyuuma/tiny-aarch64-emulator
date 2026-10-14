@@ -18,10 +18,9 @@ int main(int argc, char** argv) {
 
     CPU cpu;
     Memory mem(argv[1]);
-    while (cpu.read_pc() < MEMORY_SIZE) {
+    while (cpu.is_running()) {
         cpu.execute(mem);
     }
 
-    std::cout << '\n';
     cpu.print_state();
 }

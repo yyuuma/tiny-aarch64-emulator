@@ -135,6 +135,15 @@ void CPU::print_gpr() const {
     print_all_x();
 }
 
+void CPU::print_reg_binary(bool sf, u8 reg) {
+    if (reg > 30) {
+        throw std::runtime_error("Trying to access general purpose register out of maximum limits (30)");
+    }
+    std::cout << (sf
+            ? std::format("{:064b}\n", gpr[reg]) 
+            : std::format("{:032b}\n", gpr[reg]));
+}
+
 void CPU::print_sp() const {
     std::cout << "SP: " << read_sp() << std::endl;
 }
@@ -161,19 +170,18 @@ void CPU::print_state() const {
     print_nzcv();
 }
 
+void CPU::halt() {
+    running = false;
+}
+
+bool CPU::is_running() const {
+    return running; 
+}
+
 u32 CPU::fetch(Memory& mem) {
     u32 inst = mem.read_32(read_pc());
     increment_pc();
     return inst;
-}
-
-void CPU::print_reg_b(bool sf, u8 reg) {
-    if (reg > 30) {
-        throw std::runtime_error("Trying to access general purpose register out of maximum limits (30)");
-    }
-    std::cout << (sf
-            ? std::format("{:064b}\n", gpr[reg]) 
-            : std::format("{:032b}\n", gpr[reg]));
 }
 
 void CPU::execute(Memory& mem) {

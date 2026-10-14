@@ -150,7 +150,7 @@ void CPU::decode(u32 inst) {
 
     // 0x0000'0000'0000'0000 is treated as a HALT instruction.
     if (inst == 0x0) {
-        write_sp(MEMORY_SIZE);
+        running = false;
         return;
     }
 

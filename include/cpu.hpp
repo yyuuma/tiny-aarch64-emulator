@@ -2,21 +2,52 @@
 #define CPU_HPP
 
 #include "types.hpp"
-#include "bits.hpp"
 #include "decode.hpp"
 #include "memory.hpp"
 
 class CPU {
     private:
-        u64 gpr[31]{};
-        u64 sp{};
-        u64 pc{};
-        u64 nzcv{};
+        u64 gpr[31] = {};
+        u64 sp = {};
+        u64 pc = {};
+        u64 nzcv = {};
+
+        bool running = true;
 
         static constexpr u64 N = (1u << 31);
         static constexpr u64 Z = (1u << 30);
         static constexpr u64 C = (1u << 29);
         static constexpr u64 V = (1u << 28);
+
+        u64 read_x(u8 n) const; 
+
+        void write_x(u8 x, u64 val); 
+
+        u32 read_w(u8 n) const; 
+
+        void write_w(u8 w, u32 val); 
+
+        u64 read_sp() const; 
+
+        void write_sp(u64 val); 
+
+        u64 read_pc() const; 
+
+        void write_pc(u64 val); 
+
+        void print_all_w() const; 
+
+        void print_all_x() const; 
+
+        void print_gpr() const; 
+
+        void print_reg_binary(bool sf, u8 reg); 
+
+        void print_sp() const;
+
+        void print_pc() const;
+
+        void print_nzcv() const;
 
         void increment_pc(); 
 
@@ -89,37 +120,11 @@ class CPU {
         void decode_immediate_instruction(u32 inst);
 
     public:
-        u64 read_x(const u8 n) const; 
-
-        void write_x(const u8 x, const u64 val); 
-
-        u32 read_w(const u8 n) const; 
-
-        void write_w(const u8 w, const u32 val); 
-
-        u64 read_sp() const; 
-
-        void write_sp(u64 val); 
-
-        u64 read_pc() const; 
-
-        void write_pc(u64 val); 
-
-        void print_all_w() const; 
-
-        void print_all_x() const; 
-
-        void print_gpr() const; 
-
-        void print_sp() const;
-
-        void print_pc() const;
-
-        void print_nzcv() const;
-
         void print_state() const;
 
-        void print_reg_b(bool sf, u8 reg); 
+        void halt();
+
+        bool is_running() const;
 
         u32 fetch(Memory& mem); 
 
