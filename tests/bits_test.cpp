@@ -16,4 +16,30 @@ TEST(BitsTest, GetBitsInvalidInputProducesError) {
     EXPECT_EQ(get_bit(0x0, 0), false);
     EXPECT_EQ(get_bit(0x8000'0000'0000'0000, 0), false);
     EXPECT_THROW(get_bit(0x0, 64), std::out_of_range);
+    EXPECT_THROW(get_bitrange(0x0, 2, 1), std::runtime_error);
+    EXPECT_THROW(get_bitrange(0x0, 0, 65), std::out_of_range);
+}
+
+TEST(BitsTest, InsertBitsProducesCorrectResult) {
+    EXPECT_EQ(insert_bits_at_pos(
+                0x0123'4567'89ab'cdef,
+                0xfedc'ba98'7654'3210,
+                32,
+                32),
+            0x7654'3210'89ab'cdef
+            );
+    EXPECT_EQ(insert_bits_at_pos(
+                0x0123'4567'89ab'cdef,
+                0xfedc'ba98'7654'3210,
+                16,
+                48),
+            0x3210'4567'89ab'cdef
+            );
+    EXPECT_EQ(insert_bits_at_pos(
+                0x0123'4567'89ab'cdef,
+                0xfedc'ba98'7654'3210,
+                48,
+                0),
+            0x0123'ba98'7654'3210
+            );
 }

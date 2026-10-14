@@ -12,7 +12,7 @@ u64 generate_right_bitmask(u32 n) {
   return (static_cast<u64>(1u) << n) - 1;
 }
 
-u64 insert_bits_at_pos(u64 target, u64 source, u32 n, u32 pos) {
+u64 insert_bits_at_pos(u64 dst, u64 src, u32 n, u32 pos) {
     if (n == 0) {
         throw std::runtime_error("Invalid number of bits selected for function insert_bits_at_pos");
     }
@@ -20,9 +20,10 @@ u64 insert_bits_at_pos(u64 target, u64 source, u32 n, u32 pos) {
     if (pos + n > 64) {
         throw std::out_of_range("Tried to insert bits past the size of the data (64).");
     }
-    u64 bitmask = ~(generate_right_bitmask(n) << pos);
-    target &= bitmask;
-    return target |= (source << pos);
+    u64 bitmask = generate_right_bitmask(n);
+    src = (src & bitmask) << pos;
+    dst &= ~(bitmask << pos);
+    return dst |= src;
 }
 
 bool get_bit(u64 data, u32 bit) {
