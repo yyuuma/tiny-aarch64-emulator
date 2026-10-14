@@ -1,11 +1,4 @@
-#include <fstream>
 #include <iostream>
-#include <cstdint>
-#include <format>
-
-#include "types.hpp"
-#include "bits.hpp"
-#include "decode.hpp"
 #include "cpu.hpp"
 #include "memory.hpp"
 
@@ -19,16 +12,12 @@
 
 int main(void) {
     CPU cpu;
-    Memory mem;
-    cpu.print_gpr();
+    Memory mem("demo.bin");
+    cpu.execute(mem);
+    cpu.execute(mem);
+    cpu.execute(mem);
+    cpu.execute(mem);
     mem.print_hex();
-    cpu.write_x(0, 512);
-    mem.write_32(0, 0x91005c01); // ADD r1 r0 #23;
-    mem.write_32(4, 0xd1003008); // SUB r8 r0 #12;
-    cpu.execute(cpu.fetch(mem), mem);
-    mem.print_hex();
-    cpu.print_gpr();
-    cpu.execute(cpu.fetch(mem), mem);
-    mem.print_hex();
-    cpu.print_gpr();
+    std::cout << '\n';
+    cpu.print_state();
 }

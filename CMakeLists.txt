@@ -17,6 +17,7 @@ add_executable(main
     src/main.cpp
     src/bits.cpp
     src/decode.cpp
+    src/execute.cpp
     src/memory.cpp
     src/cpu.cpp
 )

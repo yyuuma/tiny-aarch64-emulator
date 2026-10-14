@@ -68,3 +68,6 @@ Testing/
 
 # binary files
 *.bin
+
+# assembly files
+*.s

@@ -3,25 +3,9 @@
 #include <format>
 
 #include "cpu.hpp"
-#include "bits.hpp"
-#include "decode.hpp"
 
-void CPU::shift_reg(bool sf, u8 reg, Shift_Type shift_type, u32 shift_amount) {
-    switch(shift_type) {
-        case Shift_Type::LSL:
-            gpr[reg] = gpr[reg] << shift_amount;
-            break;
-        case Shift_Type::LSR:
-            gpr[reg] = gpr[reg] >> shift_amount;
-            break;
-        case Shift_Type::ASR:
-            if (sf) {
-                gpr[reg] = static_cast<u64>(static_cast<i64>(gpr[reg]) >> shift_amount);
-            } else {
-                gpr[reg] = static_cast<u32>(static_cast<i32>(gpr[reg]) >> shift_amount);
-            }
-            break;
-    }
+void CPU::increment_pc() {
+    pc += 4;
 }
 
 bool CPU::get_negative_flag() const {
@@ -54,6 +38,23 @@ void CPU::set_carry_flag(bool b) {
 
 void CPU::set_overflow_flag(bool b) {
     b ? nzcv |= V : nzcv &= ~V;
+}
+
+u64 CPU::shift_reg(bool sf, u8 reg, Shift_Type shift_type, u32 shift_amount) {
+    u64 result = sf ? read_x(reg) : read_w(reg);
+    switch(shift_type) {
+        case Shift_Type::LSL:
+            return result << shift_amount;
+            break;
+        case Shift_Type::LSR:
+            return result >> shift_amount;
+            break;
+        case Shift_Type::ASR:
+            return static_cast<i32>(result) >> shift_amount;
+            break;
+        default:
+            throw std::runtime_error("Invalid shift register operation attempted, make sure you have a valid shift type.");
+    }
 }
 
 u64 CPU::read_x(const u8 n) const {
@@ -100,11 +101,8 @@ void CPU::write_pc(u64 val) {
     pc = val;
 }
 
-void CPU::increment_pc() {
-    pc += 4;
-}
-
 void CPU::print_all_w() const {
+    std::cout << "W Registers:" << std::endl;
     for (int i = 0; i < 31; i++) {
         std::cout << "W" << std::format("{:02}: ", i) << std::format("{:10}", static_cast<u32>(gpr[i]));
         if (i % 4 == 3) {
@@ -117,8 +115,9 @@ void CPU::print_all_w() const {
 }
 
 void CPU::print_all_x() const {
+    std::cout << "X Registers:" << std::endl;
     for (int i = 0; i < 31; i++) {
-        std::cout << "X" << std::format("{:02}: ", i) << std::format("{:10}", gpr[i]);
+        std::cout << "X" << std::format("{:02}: ", i) << std::format("{:016x}", gpr[i]);
         if (i % 4 == 3) {
             std::cout << std::endl;
         } else {
@@ -129,11 +128,35 @@ void CPU::print_all_x() const {
 }
 
 void CPU::print_gpr() const {
-    std::cout << "W Registers:" << std::endl;
     print_all_w();
     std::cout << std::endl;
-    std::cout << "X Registers:" << std::endl;
     print_all_x();
+}
+
+void CPU::print_sp() const {
+    std::cout << "SP: " << read_sp() << std::endl;
+}
+
+void CPU::print_pc() const {
+    std::cout << "PC: " << read_pc() << std::endl;
+}
+
+void CPU::print_nzcv() const {
+    std::cout << "NZCV Flags:" << std::endl;
+    std::cout << "N: " << get_negative_flag() << std::endl;
+    std::cout << "Z: " << get_zero_flag() << std::endl;
+    std::cout << "C: " << get_carry_flag() << std::endl;
+    std::cout << "V: " << get_overflow_flag() << std::endl;
+}
+
+void CPU::print_state() const {
+    print_all_x();
+    std::cout << '\n';
+    print_sp();
+    std::cout << '\n';
+    print_pc();
+    std::cout << '\n';
+    print_nzcv();
 }
 
 u32 CPU::fetch(Memory& mem) {
@@ -151,97 +174,6 @@ void CPU::print_reg_b(bool sf, u8 reg) {
             : std::format("{:032b}\n", gpr[reg]));
 }
 
-u64 CPU::perform_add_sub(u64 a, u64 b, bool op, bool sf, bool S) {
-    u64 carry = op ? 1 : 0;
-
-    if (op) {
-        b = ~b;
-    }
-
-    if (!sf) {
-        a &= UINT32_MAX;
-        b &= UINT32_MAX;
-    }
-
-    u64 sum = a + b;
-    u64 res = sum + carry;
-
-    // Set flags
-    if (S) {
-        if (sf) {
-            set_negative_flag(get_bit(res, 63));
-            set_zero_flag(res == 0);
-            set_carry_flag((sum < a) || (res < sum));
-            set_overflow_flag(
-                    (get_bit(a, 63) == get_bit(b, 63)) 
-                    && (get_bit(a, 63) != get_bit(res, 63)));
-
-        } else {
-            set_negative_flag(get_bit(res, 31));
-            set_zero_flag((res & UINT32_MAX) == 0);
-            set_carry_flag(res > UINT32_MAX);
-            set_overflow_flag(
-                    (get_bit(a, 31) == get_bit(b, 31)) 
-                    && (get_bit(a, 31) != get_bit(res, 31)));
-        }
-    }
-
-    return sf ? res : res & UINT32_MAX;
-}
-
-void CPU::execute_add_sub_immediate(u32 inst) {
-    u8 Rd = get_bitrange(inst, 0, 5);
-    u8 Rn = get_bitrange(inst, 5, 10);
-    u32 imm12 = get_bitrange(inst, 10, 22);
-    bool sh = get_bit(inst, 22);
-    bool S = get_bit(inst, 29);
-    bool op = get_bit(inst, 30);
-    bool sf = get_bit(inst, 31);
-
-    u64 operand1 = (Rn == 31 ? read_sp() : read_x(Rn));
-    u64 operand2 = (sh ? imm12 << 12 : imm12);
-
-    if (!sf) {
-        operand1 &= UINT32_MAX;
-        operand2 &= UINT32_MAX;
-    }
-
-    u64 result = perform_add_sub(operand1, operand2, op, sf, S);
-
-    if (Rd == 31) {
-        write_sp(result);
-    } else {
-        sf ? write_x(Rd, result) : write_w(Rd, result);
-    }
-}
-
-void CPU::execute_add_shifted_register(u32 inst) {
-    u8 Rd = get_bitrange(inst, 0, 5);
-    u8 Rn = get_bitrange(inst, 5, 10);
-    u32 imm6 = get_bitrange(inst, 10, 16);
-    u8 Rm = get_bitrange(inst, 16, 21);
-    u8 shift = get_bitrange(inst, 22, 24);
-    bool sf = get_bit(inst, 31);
-
-    if (shift == 0b11) {
-        throw std::runtime_error("Trying to execute an ADD_SHIFTREG instruction with a reserved option.");
-    }
-
-    if (sf == 0 && get_bit(imm6, 5) == 1) {
-        throw std::runtime_error("Trying to execute an ADD_SHIFTREG instruction where shifting is more than the maximum amount(31)");
-    }
-
-}
-
-void CPU::execute(u32 inst, Memory& mem) {
-    switch(decode(inst)) {
-        case Instruction::ADD_IMMEDIATE:
-            execute_add_sub_immediate(inst);
-            break;
-        case Instruction::SUB_IMMEDIATE:
-            execute_add_sub_immediate(inst);
-            break;
-        default:
-            throw std::runtime_error("This instruction has not been implemented.");
-    }
+void CPU::execute(Memory& mem) {
+    decode(fetch(mem));
 }

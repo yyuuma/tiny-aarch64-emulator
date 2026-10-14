@@ -24,6 +24,7 @@ Memory::Memory(const std::string& filename) {
 }
 
 void Memory::print_hex() const {
+    std::cout << "Memory:" << std::endl;
     for (size_t i = 0; i < MEMORY_SIZE; i++) {
         if (i % 16 == 0) {
             std::cout << std::format("{:08x}: ", i);

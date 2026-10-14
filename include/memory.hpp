@@ -4,7 +4,6 @@
 #include <string>
 
 #include "types.hpp"
-#include "bits.hpp"
 
 class Memory {
     private:

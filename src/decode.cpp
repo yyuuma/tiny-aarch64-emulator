@@ -1,110 +1,76 @@
 #include <stdexcept>
+
+#include "types.hpp"
+#include "cpu.hpp"
+#include "bits.hpp"
 #include "decode.hpp"
 
-Instruction_Group decode_instruction_group(u32 inst) {
-    u32 op0 = get_bit(inst, 31);
-    u32 op1 = get_bitrange(inst, 25, 29);
-
-    // 0b0000 - Reserved/SME
-    if (op1 == 0b0000) {
-        // MSB == 0: Reserved
-        // MSB == 1: SME
-        if (op0) {
-            throw std::runtime_error("SME instructions have not been implemented.");
-        } else {
-            throw std::runtime_error("Reserved instruction. This should not be run.");
-        }
-
-        // 0b0010 - SVE
-    } else if (op1 == 0b0010) {
-        throw std::runtime_error("SVE instructions have not been implemented.");
-
-        // 0b00x1 - UNALLOCATED
-    } else if ((op1 & 0b1101) == 0b0001) {
-        throw std::runtime_error("Unallocated instruction. This should not be run.");
-
-        // 0b100x - Immediate Data Processing
-    } else if ((op1 & 0b1110) == 0b1000) {
-        return Instruction_Group::IMMEDIATE;
-
-        // 0b101x - Branches, Exception Gathering & System Instructions
-    } else if ((op1 & 0b1110) == 0b1010) {
-        return Instruction_Group::BRANCH;
-
-        // 0bx101 - Register Data Processing
-    } else if ((op1 & 0b0111) == 0b0101) {
-        return Instruction_Group::REGISTER;
-
-        // 0bx111 - Scalar Floating-Point & Advanced SIMD
-    } else if ((op1 & 0b0111) == 0b0111) {
-        throw std::runtime_error("Floating-Point and SIMD instructions have not been implemented.");
-
-        // 0bx1x0 - Loads & Stores
-    } else if ((op1 & 0b0101) == 0b0100) {
-        return Instruction_Group::LOADSTORE;
-
-        // Error - Bad instruction
-    } else {
-        throw std::runtime_error("Couldn't identify this instruction.");
+bool get_instruction_bit(u32 inst, u32 bit) {
+    if (bit > 31) {
+        throw std::out_of_range("Tried to retrieve bit outside of the 32 bit-width instruction size.");
     }
+    return get_bit(inst, bit);
 }
 
-Instruction decode_immediate_add_sub_instruction(u32 inst) {
-    u32 op_S = get_bitrange(inst, 29, 31);
-    switch(op_S) {
-        case 0b00:
-            return Instruction::ADD_IMMEDIATE;
-        case 0b01:
-            return Instruction::ADDS_IMMEDIATE;
-        case 0b10:
-            return Instruction::SUB_IMMEDIATE;
-        case 0b11:
-            return Instruction::SUBS_IMMEDIATE;
-        default:
-            throw std::runtime_error("Could not identify type of Immediate Add/Sub instruction.");
+u32 get_instruction_bitrange(u32 inst, u32 lo, u32 hi) {
+    if (lo > 31 || hi > 32) {
+        throw std::out_of_range("Tried to retrieve bit outside of the 32 bit-width instruction size.");
     }
+    return get_bitrange(inst, lo, hi);
 }
 
-Instruction decode_immediate_instruction(u32 inst) {
-    u32 op0 = get_bitrange(inst, 29, 31);
-    u32 op1 = get_bitrange(inst, 22, 26);
+// https://www.scs.stanford.edu/~zyedidia/arm64/encodingindex.html#dpimm
+void CPU::decode_immediate_instruction(u32 inst) {
+    u32 op0 = get_instruction_bitrange(inst, 29, 31);
+    u32 op1 = get_instruction_bitrange(inst, 22, 26);
 
-    // op0 == 0b11 - Data Processing
-    // op0 != 0b11 - Extract
-    if ((op1 & 0b1110) == 0b1110) {
-        if (op0 == 0b11) {
-            throw std::runtime_error("1 Source Immediate instructions have not been implemented.");
-        } else {
-            throw std::runtime_error("Extract instructions have not been implemented");
-        }
+    // op1 = 0b111x - Data Processing (1 Source Immediate)
+    if ((op0 == 0b11) && (op1 & 0b1110) == 0b1110) {
+        throw std::runtime_error("1 Source Immediate instructions have not been implemented.");
 
-    // 0b00xx - PC-Relative
+        // op1 = 0b00xx - PC-Relative
     } else if ((op1 & 0b1100) == 0b0000) {
         throw std::runtime_error("PC-Relative instructions have not been implemented");
 
-    // 0b010x - Add/Subtract Immediate
+        // op1 = 0b010x - Add/Subtract Immediate
     } else if ((op1 & 0b1110) == 0b0100) {
-        return decode_immediate_add_sub_instruction(inst);
+        u32 Rd = get_instruction_bitrange(inst, 0, 5);
+        u32 Rn = get_instruction_bitrange(inst, 5, 10); 
+        u32 imm12 = get_instruction_bitrange(inst, 10, 22);
+        bool sh = get_instruction_bit(inst, 22);
+        bool S = get_instruction_bit(inst, 29);
+        bool op = get_instruction_bit(inst, 30);
+        bool sf = get_instruction_bit(inst, 31);
+        execute_immediate_add_sub_instruction(Rd, Rn, imm12, sh, S, op, sf);
 
-        // 0b0110 - Add/Subtract Immediate w/ Tags
+        // op1 = 0b0110 - Add/Subtract Immediate w/ Tags
     } else if (op1 == 0b0110) {
         throw std::runtime_error("Add/Subtract Immediate w/ Tags instructions have not been implemented.");
 
-        // 0b0111 - Min/Max Immediate
+        // op1 = 0b0111 - Min/Max Immediate
     } else if (op1 == 0b0111) {
         throw std::runtime_error("Min/Max Immediate instructions have not been implemented");
 
-        // 0b100x - Logical Immediate
+        // op1 = 0b100x - Logical Immediate
     } else if ((op1 & 0b1110) == 0b1000) {
         throw std::runtime_error("Logical Immediate instructions have not been implemented");
 
-        // 0b101x - Move Wide Immediate
+        // op1 = 0b101x - Move Wide Immediate
     } else if ((op1 & 0b1110) == 0b1010) {
-        throw std::runtime_error("Move Wide Immediate instructions have not been implemented");
+        u32 Rd = get_instruction_bitrange(inst, 0, 5);
+        u32 imm16 = get_instruction_bitrange(inst, 5, 21);
+        u32 hw = get_instruction_bitrange(inst, 21, 23);
+        u32 opc = get_instruction_bitrange(inst, 29, 31);
+        bool sf = get_instruction_bit(inst, 31);
+        execute_immediate_move_wide_instruction(Rd, imm16, hw, opc, sf);
 
-        // 0b110x - Bitfield
+        // op1 = 0b110x - Bitfield
     } else if ((op1 & 0b1110) == 0b1100) {
         throw std::runtime_error("Bitfield instructions have not been implemented");
+
+        // op0 != 0b11 AND op1 = 111x - Extract
+    } else if ((op0 != 0b11) && ((op1 & 0b1110) == 0b1110)) {
+        throw std::runtime_error("Extract instructions have not been implemented");
 
         // Error: Invalid Instruction 
     } else {
@@ -112,55 +78,52 @@ Instruction decode_immediate_instruction(u32 inst) {
     }
 }
 
-Instruction decode_shifted_register_add_sub_instruction(u32 inst) {
-    u32 op_S = get_bitrange(inst, 29, 31);
-    switch(op_S) {
-        case 0b00:
-            return Instruction::ADD_SHIFTREG;
-        case 0b01:
-            return Instruction::ADDS_SHIFTREG;
-        case 0b10:
-            return Instruction::SUB_SHIFTREG;
-        case 0b11:
-            return Instruction::SUBS_SHIFTREG;
-        default:
-            throw std::runtime_error("Could not identify type of Shifted Register Add/Sub instruction.");
-    }
-}
+// https://www.scs.stanford.edu/~zyedidia/arm64/encodingindex.html#dpreg
+void CPU::decode_register_instruction(u32 inst) {
+    u32 op0 = get_instruction_bit(inst, 30);
+    u32 op1 = get_instruction_bit(inst, 28);
+    u32 op2 = get_instruction_bitrange(inst, 21, 25);
+    u32 op3 = get_instruction_bitrange(inst, 10, 16);
 
-Instruction decode_extended_register_add_sub_instruction(u32 inst) {
-    u32 opt  = get_bitrange(inst, 22, 24);
-    u32 op_S = get_bitrange(inst, 29, 31);
-    if (opt != 0b00) {
-        throw std::runtime_error("Found an unallocated instruction while decoding an Extended Register Add/Sub instruction");
-    }
-    switch(op_S) {
-        case 0b00:
-            return Instruction::ADD_EXTENDREG;
-        case 0b01:
-            return Instruction::ADDS_EXTENDREG;
-        case 0b10:
-            return Instruction::SUB_EXTENDREG;
-        case 0b11:
-            return Instruction::SUBS_EXTENDREG;
-        default:
-            throw std::runtime_error("Could not identify type of Shifted Register Add/Sub instruction.");
-    }
-}
+    // op0 = 0 AND op1 = 1 AND op2 = 0b0110 - Data-processing (2 source)
+    if ((op0 == 0) && (op1 == 1) && (op2 == 0b0110)) {
+        throw std::runtime_error("Data processing (2 Source) instructions have not been implemented.");
 
-Instruction decode_register_instruction(u32 inst) {
-    //const u32 op0 = get_bit(inst, 30);
-    const u32 op1 = get_bit(inst, 28);
-    const u32 op2 = get_bitrange(inst, 21, 25);
-    //const u32 op3 = get_bitrange(inst, 10, 16);
+        // op0 = 1 AND op1 = 1 AND op2 = 0b0110 - Data-processing (1 source)
+    } else if ((op0 == 1) && (op1 == 1) && (op2 == 0b0110)) {
+        throw std::runtime_error("Data processing (1 Source) instructions have not been implemented.");
 
-    // op1 = 0 AND op2 = 0b1xx0 - Add/Subtract Shifted Register
-    if (op1 == 0 && (op2 & 0b1001) == 0b1000) {
-        return decode_shifted_register_add_sub_instruction(inst);
+        // op1 = 0 AND op2 = 0b0xxx - Logical (Shifted Register)
+    } else if ((op1 == 0) && ((op2 & 0b1000) == 0b0000)) {
+        throw std::runtime_error("Logical (Shifted Register) instructions have not been implemented.");
 
-        // op1 = 0 AND op2 = 0b1xx1 - ADD (Extended Register)
+        // op1 = 0 AND op2 = 0b1xx0 - Add/Subtract Shifted Register
+    } else if (op1 == 0 && (op2 & 0b1001) == 0b1000) {
+        u32 Rd = get_instruction_bitrange(inst, 0, 5);
+        u32 Rn = get_instruction_bitrange(inst, 5, 10);
+        u32 imm6 = get_instruction_bitrange(inst, 10, 16);
+        u32 Rm = get_instruction_bitrange(inst, 16, 21);
+        u32 shift = get_instruction_bitrange(inst, 22, 24);
+        bool S = get_instruction_bit(inst, 29);
+        bool op = get_instruction_bit(inst, 30);
+        bool sf = get_instruction_bit(inst, 31);
+        execute_shifted_register_add_sub_instruction(Rd, Rn, imm6, Rm, shift, S, op, sf);
+
+        // op1 = 0 AND op2 = 0b1xx1 - Add/Subtract (Extended Register)
     } else if (op1 == 0 && (op2 & 0b1001) == 0b1001) { 
-        return decode_extended_register_add_sub_instruction(inst);
+        u32 Rd = get_instruction_bitrange(inst, 0, 5);
+        u32 Rn = get_instruction_bitrange(inst, 5, 10);
+        u32 imm3 = get_instruction_bitrange(inst, 10, 13);
+        u32 option = get_instruction_bitrange(inst, 13, 16);
+        u32 Rm = get_instruction_bitrange(inst, 16, 21);
+        u32 opt = get_instruction_bitrange(inst, 22, 24);
+        bool S = get_instruction_bit(inst, 29);
+        bool op = get_instruction_bit(inst, 30);
+        bool sf = get_instruction_bit(inst, 31);
+        if (opt != 0b0000) {
+            unallocated();
+        }
+        execute_extended_register_add_sub_instruction(Rd, Rn, imm3, option, Rm, opt, S, op, sf); 
 
         // Haven't implemented other register processing instructions.
     } else {
@@ -168,28 +131,60 @@ Instruction decode_register_instruction(u32 inst) {
     }
 }
 
-Instruction decode(u32 inst) {
-    switch(decode_instruction_group(inst)) {
-        case Instruction_Group::RESERVED:
-            throw std::runtime_error("Trying to execute a reserved instruction.");
-            break;
-        case Instruction_Group::UNALLOCATED:
-            throw std::runtime_error("Trying to execute an unallocated instruction.");
-            break;
-        case Instruction_Group::IMMEDIATE:
-            return decode_immediate_instruction(inst);
-        case Instruction_Group::BRANCH:
-            // TODO: implement
-            break;
-        case Instruction_Group::REGISTER:
-            return decode_register_instruction(inst);
-            break;
-        case Instruction_Group::SIMD:
-            //TODO: implement
-            break;
-        case Instruction_Group::LOADSTORE:
-            //TODO: implement
-            break;
+void unimplemented() {
+    throw std::runtime_error("Tried to execute an unimplemented instruction.");
+}
+
+void unallocated() {
+    throw std::runtime_error("Tried to execute an unallocated instruction");
+}
+
+void undefined() {
+    throw std::runtime_error("Tried to execute an undefined instruction");
+}
+
+// https://www.scs.stanford.edu/~zyedidia/arm64/encodingindex.html
+void CPU::decode(u32 inst) {
+    u32 op0 = get_instruction_bit(inst, 31);
+    u32 op1 = get_instruction_bitrange(inst, 25, 29);
+
+    // Reserved
+    if (op0 == 0 && op1 == 0b0000) {
+        unimplemented();
+
+        // SME Encodings
+    } else if (op0 == 1 && op1 == 0b0000) {
+        unimplemented();
+
+        // SVE Encodings
+    } else if (op1 == 0b0010) {
+        unimplemented();
+
+        // Unallocated
+    } else if ((op1 & 0b1101) == 0b0001) {
+        unallocated();
+
+        // Data Processing - Immediate
+    } else if ((op1 & 0b1110) == 0b1000) {
+        decode_immediate_instruction(inst);
+
+        // Branches 
+    } else if ((op1 & 0b1110) == 0b1010) {
+        unimplemented();
+
+        // Data Processing - Register
+    } else if ((op1 & 0b0111) == 0b0101) {
+        decode_register_instruction(inst);
+
+        // Data Processing - Scalar Floating-Point & SIMD
+    } else if ((op1 & 0b0111) == 0b0111) {
+        unimplemented();
+
+        // Loads and Stores
+    } else if ((op1 & 0b0101) == 0b0100) {
+        unimplemented();
+
+    } else {
+        throw std::runtime_error("Invalid instruction decoded.");
     }
-    throw std::runtime_error("Couldn't decode instruction. Instruction may be corrupt.");
 }
