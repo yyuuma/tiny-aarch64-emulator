@@ -50,7 +50,9 @@ u64 CPU::shift_reg(bool sf, u8 reg, Shift_Type shift_type, u32 shift_amount) {
             return result >> shift_amount;
             break;
         case Shift_Type::ASR:
-            return static_cast<i64>(result) >> shift_amount;
+            return sf
+                ? static_cast<i64>(result) >> shift_amount
+                : static_cast<i32>(result) >> shift_amount;
             break;
         default:
             throw std::runtime_error("Invalid shift register operation attempted, make sure you have a valid shift type.");
