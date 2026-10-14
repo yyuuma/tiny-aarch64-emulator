@@ -5,9 +5,10 @@
 
 #include "types.hpp"
 
+static constexpr std::size_t MEMORY_SIZE = 256;
+
 class Memory {
     private:
-        static constexpr std::size_t MEMORY_SIZE = 256;
         u8 memory[MEMORY_SIZE]{};
 
     public:

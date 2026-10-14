@@ -148,6 +148,12 @@ void CPU::decode(u32 inst) {
     u32 op0 = get_instruction_bit(inst, 31);
     u32 op1 = get_instruction_bitrange(inst, 25, 29);
 
+    // 0x0000'0000'0000'0000 is treated as a HALT instruction.
+    if (inst == 0x0) {
+        write_sp(MEMORY_SIZE);
+        return;
+    }
+
     // Reserved
     if (op0 == 0 && op1 == 0b0000) {
         unimplemented();

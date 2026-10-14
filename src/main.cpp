@@ -10,14 +10,18 @@
 // sh     - Left Shift applying to Immediate
 // S = 1  - Instruction Updates the Condition Flags
 
-int main(void) {
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        std::cout << "Usage: tiny-aarch64-emulator [FILE].bin" << std::endl;
+        return 0;
+    }
+
     CPU cpu;
-    Memory mem("demo.bin");
-    cpu.execute(mem);
-    cpu.execute(mem);
-    cpu.execute(mem);
-    cpu.execute(mem);
-    mem.print_hex();
+    Memory mem(argv[1]);
+    while (cpu.read_pc() < MEMORY_SIZE) {
+        cpu.execute(mem);
+    }
+
     std::cout << '\n';
     cpu.print_state();
 }
