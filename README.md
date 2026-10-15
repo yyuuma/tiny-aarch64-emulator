@@ -58,6 +58,8 @@ For running ARM assembly files:
 ./run_emulator.sh [FILE].s
 ```
 
+There is a demo file in the examples directory.
+
 ## Useful Links
 [ARM's A64 Architecture Guide](https://support.arm.com/documentation/102374/0103)
 
