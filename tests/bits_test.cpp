@@ -21,25 +21,60 @@ TEST(BitsTest, GetBitsInvalidInputProducesError) {
 }
 
 TEST(BitsTest, InsertBitsProducesCorrectResult) {
-    EXPECT_EQ(insert_bits_at_pos(
+    EXPECT_EQ(
+            insert_bits_at_pos(
                 0x0123'4567'89ab'cdef,
                 0xfedc'ba98'7654'3210,
                 32,
                 32),
             0x7654'3210'89ab'cdef
             );
-    EXPECT_EQ(insert_bits_at_pos(
+    EXPECT_EQ(
+            insert_bits_at_pos(
                 0x0123'4567'89ab'cdef,
                 0xfedc'ba98'7654'3210,
                 16,
                 48),
             0x3210'4567'89ab'cdef
             );
-    EXPECT_EQ(insert_bits_at_pos(
+    EXPECT_EQ(
+            insert_bits_at_pos(
                 0x0123'4567'89ab'cdef,
                 0xfedc'ba98'7654'3210,
                 48,
                 0),
             0x0123'ba98'7654'3210
             );
+}
+
+TEST(BitsTest, InsertBitsInvalidInputProducesError) {
+    EXPECT_THROW(
+            insert_bits_at_pos(
+                0x0123'4567'89ab'cdef,
+                0xfedc'ba98'7654'3210,
+                0,
+                64),
+            std::runtime_error
+            );
+    EXPECT_THROW(
+            insert_bits_at_pos(
+                0x0123'4567'89ab'cdef,
+                0xfedc'ba98'7654'3210,
+                1,
+                64),
+            std::out_of_range
+            );
+}
+
+TEST(BitsTest, GenerateRightBitmaskProducesCorrectResult) {
+    EXPECT_EQ(generate_right_bitmask(0), 0x00);
+    EXPECT_EQ(generate_right_bitmask(16), 0xffff);
+    EXPECT_EQ(generate_right_bitmask(32), 0xffff'ffff);
+    EXPECT_EQ(generate_right_bitmask(48), 0xffff'ffff'ffff);
+    EXPECT_EQ(generate_right_bitmask(64), 0xffff'ffff'ffff'ffff);
+}
+
+TEST(BitsTest, GenerateRightBitmaskInvalidInputProducesError) {
+    EXPECT_THROW(generate_right_bitmask(65), std::out_of_range);
+    EXPECT_THROW(generate_right_bitmask(100), std::out_of_range);
 }
