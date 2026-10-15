@@ -46,7 +46,7 @@ cmake --build ./build/
 ```
 
 ## Usage
-### NOTE: A zero instruction (0x00000000) acts as a HALT instruction and will stop the execution of the program. Alternatively, the program will stop execution once it has reached the end of memory. Memory is zero-initialised, so the CPU will stop once it has executed the final instruction.
+#### NOTE: A zero instruction (0x00000000) acts as a HALT instruction and will stop the execution of the program. Alternatively, the program will stop execution once it has reached the end of memory. Memory is zero-initialised, so the CPU will stop once it has executed the final instruction.
 
 For running raw binary files:
 ```sh
