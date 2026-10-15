@@ -1,7 +1,7 @@
 # Tiny AArch64 Emulator
 A small educational project written in C++20 dedicated to learning how A64 instructions are decoded and executed.
 
-The program loads raw A64 instruction bytes into a 256 byte memory, executes the instructions and prints the final CPU state.
+The program loads raw A64 instruction bytes into a 256 byte memory, executes the instructions and prints the final CPU state. See [Usage](./#Usage).
 
 Inspired by Dave's ["Emulating a 6502 CPU in C++"](https://www.youtube.com/watch?v=qJgsuQoy9bc&list=PLLwK93hM93Z13TRzPx9JqTIn33feefl37) Series.
 
