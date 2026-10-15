@@ -19,14 +19,6 @@ class CPU {
         static constexpr u64 C = (1u << 29);
         static constexpr u64 V = (1u << 28);
 
-        u64 read_x(u8 n) const; 
-
-        void write_x(u8 x, u64 val); 
-
-        u32 read_w(u8 n) const; 
-
-        void write_w(u8 w, u32 val); 
-
         u64 read_sp() const; 
 
         void write_sp(u64 val); 
@@ -120,6 +112,14 @@ class CPU {
         void decode_immediate_instruction(u32 inst);
 
     public:
+        u64 read_x(u8 n) const; 
+
+        void write_x(u8 x, u64 val); 
+
+        u32 read_w(u8 n) const; 
+
+        void write_w(u8 w, u32 val); 
+
         void print_state() const;
 
         void halt();

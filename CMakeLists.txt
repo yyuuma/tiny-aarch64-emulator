@@ -34,7 +34,13 @@ enable_testing()
 
 add_executable(emulator_tests
     tests/bits_test.cpp
-    src/bits.cpp)
+    tests/add_sub_test.cpp
+    src/bits.cpp
+    src/decode.cpp
+    src/execute.cpp
+    src/memory.cpp
+    src/cpu.cpp
+)
 
 target_include_directories(emulator_tests PRIVATE
     include)
