@@ -19,6 +19,10 @@ class CPU {
         static constexpr u64 C = (1u << 29);
         static constexpr u64 V = (1u << 28);
 
+        void write_x(u8 x, u64 val); 
+
+        void write_w(u8 w, u32 val); 
+
         u64 read_sp() const; 
 
         void write_sp(u64 val); 
@@ -42,14 +46,6 @@ class CPU {
         void print_nzcv() const;
 
         void increment_pc(); 
-
-        bool get_negative_flag() const;
-
-        bool get_zero_flag() const; 
-
-        bool get_carry_flag() const; 
-
-        bool get_overflow_flag() const;
 
         void set_negative_flag(bool b);
 
@@ -114,11 +110,15 @@ class CPU {
     public:
         u64 read_x(u8 n) const; 
 
-        void write_x(u8 x, u64 val); 
-
         u32 read_w(u8 n) const; 
 
-        void write_w(u8 w, u32 val); 
+        bool get_negative_flag() const;
+
+        bool get_zero_flag() const; 
+
+        bool get_carry_flag() const; 
+
+        bool get_overflow_flag() const;
 
         void print_state() const;
 
